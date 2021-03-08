@@ -121,11 +121,69 @@ for confIdx = 1:confNo
     
 end
         
+
+%% Get wealth sums for each configuration, as calculated separately for both
+% pricings
+
+% preallocate
+confWealth = nan(confNo, 2, 2);
+confWealthDiffs = nan(confNo, 3);
+
+for confIdx = 1:confNo        
+        
+    % for a given "tokens" and "prices" matrix
+    tokens = squeeze(confTokens(confIdx, :, :));
+    prices = squeeze(confPrices(confIdx, :, :));        
+    
+    % total wealth per token set, per pricing
+    confWealth(confIdx, :, :) = tokens'*prices;  % matrix multiplication, results in 2 x 2 matrix
+        
+    % difference across main diagonals
+    confWealthDiffs = [confWealth(confIdx, 1, 1) - confWealth(confIdx, 2, 2);...
+        confWealth(confIdx, 1, 1) - confWealth(confIdx, 1, 2);...
+        confWealth(confIdx, 2, 1) - confWealth(confIdx, 2, 2)];
+    
+    % select configs with OKayish total wealth numbers
+    
+    
+end
         
         
         
-        
-        
-        
-        
+    
+    
+    
+   
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
         
