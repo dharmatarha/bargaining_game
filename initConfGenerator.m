@@ -127,7 +127,6 @@ end
 
 % preallocate
 confWealth = nan(confNo, 2, 2);
-confWealthDiffs = nan(confNo, 3);
 
 for confIdx = 1:confNo        
         
@@ -137,21 +136,33 @@ for confIdx = 1:confNo
     
     % total wealth per token set, per pricing
     confWealth(confIdx, :, :) = tokens'*prices;  % matrix multiplication, results in 2 x 2 matrix
-        
-    % difference across main diagonals
-    confWealthDiffs = [confWealth(confIdx, 1, 1) - confWealth(confIdx, 2, 2);...
-        confWealth(confIdx, 1, 1) - confWealth(confIdx, 1, 2);...
-        confWealth(confIdx, 2, 1) - confWealth(confIdx, 2, 2)];
-    
-    % select configs with OKayish total wealth numbers
-    
     
 end
+
+% % mean wealth on main diagonal for each config
+% meanW = (confWealth(:, 1, 1) + confWealth(:, 2, 2)) / 2;
+% asymmetry index for each config  =  ratios of off-diagonals
+confAsym = max(confWealth(:, 1, 2)./confWealth(:, 2, 1), confWealth(:, 2, 1)./confWealth(:, 1, 2));
+% bargaining difficulty index  =  ratio of off-diagonals to main diagonals
+confBargDiff = (confWealth(:, 1, 2)+confWealth(:, 2, 1)) ./ (confWealth(:, 1, 1)+confWealth(:, 2, 2));
+
+
         
-        
-        
+
+%% Select "easy" and "difficult" ones:
+
+% easy: assymetry not too big + price differences sum is close to zero +
+% bargaining difficulty is largeish 
+easyConfs = confAsym < 1.1 & abs(confDiffSums) <= 10 & confBargDiff > 1.2 & confBargDiff < 1.5;
+
+% more difficult ones: assymetry not too big + price differences sum is close to zero + bargaining difficulty is smaller, close to zero     
+harderConfs = confAsym < 1.1 & abs(confDiffSums) <= 10 & confBargDiff > 1.01 & confBargDiff < 1.1;        
     
-    
+% list first ten
+disp([char(10), '"Easy" configs: ']);
+disp(find(easyConfs, 10));    
+disp([char(10), '"Harder" configs: ']); 
+disp(find(harderConfs, 10)); 
     
    
     
