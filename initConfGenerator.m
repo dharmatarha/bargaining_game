@@ -2,6 +2,10 @@
 %
 %
 %
+% TODO:
+% - include the effect of "must haves" in the potential wealth flow (PWF)
+% indices
+%
 %
 
 %% Base values for generating potential configurations
