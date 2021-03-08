@@ -158,17 +158,61 @@ easyConfs = confAsym < 1.1 & abs(confDiffSums) <= 10 & confBargDiff > 1.2 & conf
 % more difficult ones: assymetry not too big + price differences sum is close to zero + bargaining difficulty is smaller, close to zero     
 harderConfs = confAsym < 1.1 & abs(confDiffSums) <= 10 & confBargDiff > 1.01 & confBargDiff < 1.1;        
     
-% list first ten
-disp([char(10), '"Easy" configs: ']);
-disp(find(easyConfs, 10));    
-disp([char(10), '"Harder" configs: ']); 
-disp(find(harderConfs, 10)); 
+% % list first ten
+% disp([char(10), '"Easy" configs: ']);
+% disp(find(easyConfs, 10));    
+% disp([char(10), '"Harder" configs: ']); 
+% disp(find(harderConfs, 10)); 
     
    
     
+%% Calculate total potential wealth-flows in both directions
+
+% Potential wealth flow (PWF) is all value that oculd be traded in one or the
+% other direction (from player 1 to player 2 or the other way around) based
+% on the price differences.
+% PWF is calculated as all tokens with a positive / negative price
+% difference, multiplied with the number of available tokens, summed across
+% tokens.
+
+% preallocate
+PWF = nan(confNo, 2);
+
+for confIdx = 1:confNo        
     
+    % for a given "tokens" and "prices" matrix
+    tokens = squeeze(confTokens(confIdx, :, :));
+    prices = squeeze(confPrices(confIdx, :, :));        
     
+    % mask for price differences in one direction
+    maskOne = prices(:, 2) > prices(:, 1);
+    % get PWF, use price differences for calculation
+    PWF(confIdx, 1) = dot(tokens(maskOne, 1), (prices(maskOne, 2)-prices(maskOne, 1)));
     
+    % mask for price differences in other direction
+    maskTwo = prices(:, 1) > prices(:, 2); 
+    % get PWF, use price differences for calculation
+    PWF(confIdx, 2) = dot(tokens(maskTwo, 2), (prices(maskTwo, 1)-prices(maskTwo, 2)));    
+
+    
+end
+    
+
+% get differences in PWFs
+PWFdiff = PWF(:, 1) - PWF(:, 2);
+
+% get easy / hard ones based on PWF
+PWFeasy = abs(confDiffSums) <= 10 & ...
+    PWF(:, 1) > 300 & ...
+    PWF(:, 2) > 300 & ...
+    PWFdiff < 50;
+
+% get hard ones based on PWF
+PWFhard = abs(confDiffSums) <= 10 & ...
+    PWF(:, 1) > 50 & PWF(:, 1) < 150 & ... 
+    PWF(:, 2) > 50 & PWF(:, 2) < 150 & ...
+    PWFdiff < 50;
+
     
     
     
