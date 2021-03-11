@@ -184,9 +184,15 @@ try
     DrawFormattedText(onWin, instrText, 'center', 'center', txtColor);
     Screen('Flip', onWin);
     WaitSecs(instrTime);
+    
+    offWin = Screen('OpenOffscreenWindow', -1);
+    for i = 1:imgNo
+         pricesText = num2str(tokenPrices(i,1)), '$';
+    end
 
     % display scaled images
     Screen('DrawTextures', onWin, imgTextures, [], destRect);
+    %Screen('DrawTexture', offWin, pricesText, [], priceRect);
             
     % flip window, get timestamp
     firstFlip = Screen('Flip', onWin);
@@ -254,18 +260,16 @@ try
                 end  % if
             end  % for
             
-            for i = 1:imgNo
+           % for i = 1:imgNo
                 %if counterState(i) > 0
-                  DrawFormattedText(onWin, [num2str(tokenPrices(i,1)), '$'], 'center',...
-                      'center', txtColor, [], [], [], [], [], priceRect(:,i)');
+                %  DrawFormattedText(onWin, [num2str(tokenPrices(i,1)), '$'], 'center',...
+                %      'center', txtColor, [], [], [], [], [], priceRect(:,i)');
                 %end % if
-            end %for
+           % end %for
             
             % display scaled images
             Screen('DrawTextures', onWin, imgTextures, [], destRect);
             
-            %DrawFormattedText(onWin, [num2str(tokenPrices(1,1)), '$'], 'center',...
-            %                'center', txtColor, [], [], [], [], [], priceRect);
             
             % flip
             Screen('Flip', onWin);
