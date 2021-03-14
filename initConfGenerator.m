@@ -1,10 +1,13 @@
 %% Function to generate token and price configs in the Bargaining Game
 %
-%
-%
-% TODO:
-% - include the effect of "must haves" in the potential wealth flow (PWF)
-% indices
+% As of now, we think an "easy" config should have the following
+% properties, if its index is "idx":
+% - PWFeasy(idx) is 1, that is, there is a relatively large potential for bargaining 
+% - PWFideal(idx, 1) is close to PWFideal(idx, 2) and they are both > 100,
+% that is, there is a potential for bargaining even after exchanging
+% must-haves
+% - msutHavesPrice(idx, 1) is close to mustHavesPrice(idx, 2), that is, the
+% must-have tokens represent a similar overall value for both players
 %
 %
 
@@ -87,6 +90,7 @@ confDiffSums = sum(squeeze(confPrices(:, :, 1)-confPrices(:, :, 2)), 2);
 %% Get list and number of must-have tokens for each potential config
 
 confMustHaves = nan(confNo, tokenNo, 2);
+mustHavesPrice = nan(confNo, 2);
 
 for confIdx = 1:confNo
     
@@ -122,6 +126,14 @@ for confIdx = 1:confNo
 
     % collect results into matrix of all must-haves
     confMustHaves(confIdx, :, :) = mustHaves;
+    
+    % calculate also the wealth-effect:
+    % what is the total prize of items a player needs to obtain
+    % first for player 1:
+    mustHavesPrice(confIdx, 1) = sum((mustHaves(:, 1)-tokens(:, 1)).*prices(:, 2), 'omitnan');
+    % then for player 2:
+    mustHavesPrice(confIdx, 2) = sum((mustHaves(:, 2)-tokens(:, 2)).*prices(:, 1), 'omitnan');
+    
     
 end
         
@@ -181,6 +193,7 @@ harderConfs = confAsym < 1.1 & abs(confDiffSums) <= 10 & confBargDiff > 1.01 & c
 
 % preallocate
 PWF = nan(confNo, 2);
+PWFideal = nan(confNo, 2);  % PWF after must-haves are exchanged
 
 for confIdx = 1:confNo        
     
@@ -198,12 +211,36 @@ for confIdx = 1:confNo
     % get PWF, use price differences for calculation
     PWF(confIdx, 2) = dot(tokens(maskTwo, 2), (prices(maskTwo, 1)-prices(maskTwo, 2)));    
 
+    % get wealth flow also without must-haves, treating them as if players
+    % have already exchanged them
+    
+    mustHaves = squeeze(confMustHaves(confIdx, :, :));
+    mustBargain = mustHaves-tokens;  % tokens players need to obtain from the other player
+    mustBargain(isnan(mustBargain)) = 0;
+    % get distribution of tokens after exchanging must-have tokens
+    tokensIdeal = tokens+mustBargain-[mustBargain(:,2), mustBargain(:,1)]; 
+    
+    % get PWF for idealized token distribution
+    % first adjust the mask: players won't trade must-have items they
+    % collected
+    
+    % player 1
+    maskOneIdeal = maskOne; 
+    maskOneIdeal(~isnan(mustHaves(:, 1))) = 0;
+    PWFideal(confIdx, 1) = dot(tokensIdeal(maskOneIdeal, 1), (prices(maskOneIdeal, 2)-prices(maskOneIdeal, 1)));
+    % player 2
+    maskTwoIdeal = maskTwo; 
+    maskTwoIdeal(~isnan(mustHaves(:, 2))) = 0;
+    PWFideal(confIdx, 2) = dot(tokensIdeal(maskTwoIdeal, 2), (prices(maskTwoIdeal, 1)-prices(maskTwoIdeal, 2)));
+            
+            
     
 end
     
 
 % get differences in PWFs
 PWFdiff = PWF(:, 1) - PWF(:, 2);
+PWFidealDiff = PWFideal(:, 1)-PWFideal(:, 2); 
 
 % get easy / hard ones based on PWF
 PWFeasy = abs(confDiffSums) <= 10 & ...
@@ -217,8 +254,9 @@ PWFhard = abs(confDiffSums) <= 10 & ...
     PWF(:, 2) > 50 & PWF(:, 2) < 150 & ...
     PWFdiff < 50;
 
-    
-    
+   
+
+
     
     
     
