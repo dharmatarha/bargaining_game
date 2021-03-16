@@ -26,7 +26,7 @@ diffRange = -20:5:20;
 mustHaveNo = 3;
 
 % no. of random configs to generate
-confNo = 10^4;
+confNo = 5*10^4;
 
 
 %% Generate potential configs
@@ -256,9 +256,21 @@ PWFhard = abs(confDiffSums) <= 10 & ...
 
    
 
+%% Easy ones based on PWFeasy, PWFideal and mustHavesPrice
 
+easyIdx = PWFeasy & abs(PWF(:, 1)-PWF(:, 2)) < 50 & abs(mustHavesPrice(:, 1)-mustHavesPrice(:, 2)) < 20;
+easyIdx = find(easyIdx);
     
-    
+easyConfigs = struct;
+for i=1:numel(easyIdx) 
+    z=easyIdx(i); 
+    easyConfigs(i).tokens = squeeze(confTokens(z, :, :)); 
+    easyConfigs(i).prices = squeeze(confPrices(z, :, :));
+    easyConfigs(i).mustHaves = squeeze(confMustHaves(z, :, :)); 
+    easyConfigs(i).PWF = PWF(z, :); 
+    easyConfigs(i).PWFideal = PWFideal(z, :); 
+    easyConfigs(i).mustHavesPrice = mustHavesPrice(z, :); 
+end     
     
     
     
