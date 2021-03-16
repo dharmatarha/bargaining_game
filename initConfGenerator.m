@@ -26,7 +26,7 @@ diffRange = -20:5:20;
 mustHaveNo = 3;
 
 % no. of random configs to generate
-confNo = 5*10^4;
+confNo = 10^5;
 
 
 %% Generate potential configs
@@ -130,9 +130,11 @@ for confIdx = 1:confNo
     % calculate also the wealth-effect:
     % what is the total prize of items a player needs to obtain
     % first for player 1:
-    mustHavesPrice(confIdx, 1) = sum((mustHaves(:, 1)-tokens(:, 1)).*prices(:, 2), 'omitnan');
+   mustHavesPrice(confIdx, 1) = sum((mustHaves(:, 1)-tokens(:, 1)).*prices(:, 2), 'omitnan');
+%     mustHavesPrice(confIdx, 1) = nansum((mustHaves(:, 1)-tokens(:, 1)).*prices(:, 2));
     % then for player 2:
-    mustHavesPrice(confIdx, 2) = sum((mustHaves(:, 2)-tokens(:, 2)).*prices(:, 1), 'omitnan');
+   mustHavesPrice(confIdx, 2) = sum((mustHaves(:, 2)-tokens(:, 2)).*prices(:, 1), 'omitnan');
+%     mustHavesPrice(confIdx, 2) = nansum((mustHaves(:, 2)-tokens(:, 2)).*prices(:, 1));
     
     
 end
