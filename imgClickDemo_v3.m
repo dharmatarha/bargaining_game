@@ -98,10 +98,10 @@ txtColor = [0, 0, 0];  % black letters
 txtSize = 30;
 
 % about counters - depends on "counterTypesMax"
-counterLoc = [0.15, 0.80;;...  % positions similarly to "imgLoc"
-          0.30, 0.80;...
-          0.45, 0.80;...
-          0.55, 0.80];
+counterLoc = [0.10, 0.75;;...  % positions similarly to "imgLoc"
+          0.25, 0.75;...
+          0.40, 0.75;...
+          0.55, 0.75];
 % sanity check - compatibilty with "counterTypesMax"
 if counterTypesMax > size(counterLoc, 1)
     error(['There are not enough locations specified in "counterLoc" for the ',...
@@ -134,7 +134,7 @@ shelvesNoRectSize = [60, 60];
 % locations and rect size for token numbers on the shelves
 % (below token images on counter)
 counterNoLoc = counterLoc;
-counterNoLoc(:, 2) = counterNoLoc(:, 2)+10;
+counterNoLoc(:, 2) = counterNoLoc(:, 2)+0.10;
 counterNoRectSize = [60, 60];
 
 
@@ -321,10 +321,8 @@ try
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % preallocate flags, vars
-    oldCounterState = zeros(imgNo, 1);
     counterState = tokenAmounts;
     counterStarted = zeros(imgNo, 1);  
-    oldShelvesState = tokenAmounts;
     shelvesState = tokenAmounts;
     changeFlag = false;  % flag for changing the content of the display
     shelves2counter = zeros(imgNo, 1);  % mapping between tokens on shelves and counter positions
@@ -362,8 +360,6 @@ try
                     % if player added a token from shelves to counter and there was at least one token on shelves,
                     % adjust the state vectors and set changeFlag for redrawing
                     if isequal(buttons, addButtonState) && shelvesState(mouseInRect) > 0
-                        oldCounterState = counterState;
-                        oldShelvesState = shelvesState;
                         counterState(mouseInRect) = counterState(mouseInRect) + 1;
                         shelvesState(mouseInRect) =  shelvesState(mouseInRect)-1;
                         changeFlag = true;
@@ -372,8 +368,6 @@ try
                     % adjust the state vectors and set changeFlag for redrawing,
                     % further check if token is off the counter completely
                     elseif isequal(buttons, subtractButtonState) && counterState(mouseInRect) > 0
-                        oldCounterState = counterState;
-                        oldShelvesState = shelvesState;
                         counterState(mouseInRect) = counterState(mouseInRect) - 1;
                         shelvesState(mouseInRect) =  shelvesState(mouseInRect)+1;
                         changeFlag = true;
@@ -401,8 +395,6 @@ try
                             % adjust shelves2counter mapping
                             shelves2counter(mouseInRect) = counterSpaceIdx;
                             % adjust state vectors, set changeFlag
-                            oldCounterState = counterState;
-                            oldShelvesState = shelvesState;
                             counterState(mouseInRect) = counterState(mouseInRect) - 1;
                             shelvesState(mouseInRect) =  shelvesState(mouseInRect)+1;
                             changeFlag = true;
@@ -449,7 +441,7 @@ try
             end  % for
 
 
-            % draw images & prices
+            % draw images & prices for shelves
             Screen('DrawTextures', onWin, shelvesWin);
 
             % flip
@@ -466,7 +458,7 @@ try
     disp('Thanks for shopping with us!');
     sca;
 
- call Screen('CloseAll') and rethrow error if stg went south
+% call Screen('CloseAll') and rethrow error if stg went south
 catch ME
     sca;
     rethrow(ME)
