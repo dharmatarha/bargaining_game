@@ -254,13 +254,12 @@ PWFhard = abs(confDiffSums) <= 10 & ...
     PWF(:, 2) > 50 & PWF(:, 2) < 150 & ...
     PWFdiff < 50;
 
-   
 
 %% Easy ones based on PWFeasy, PWFideal and mustHavesPrice
 
-easyIdx = PWFeasy & abs(PWF(:, 1)-PWF(:, 2)) < 50 & abs(mustHavesPrice(:, 1)-mustHavesPrice(:, 2)) < 20;
+easyIdx = PWFeasy & abs(PWFideal(:, 1)-PWFideal(:, 2)) < 50 & abs(mustHavesPrice(:, 1)-mustHavesPrice(:, 2)) < 20 & PWFideal(:, 1) > 50 & PWFideal(:, 2) > 50;
 easyIdx = find(easyIdx);
-    
+
 easyConfigs = struct;
 for i=1:numel(easyIdx) 
     z=easyIdx(i); 
@@ -270,7 +269,8 @@ for i=1:numel(easyIdx)
     easyConfigs(i).PWF = PWF(z, :); 
     easyConfigs(i).PWFideal = PWFideal(z, :); 
     easyConfigs(i).mustHavesPrice = mustHavesPrice(z, :); 
-end     
+end
+    
     
     
     
