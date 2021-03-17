@@ -23,6 +23,8 @@
 
 
 pkg load image
+pkg load sockets
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%    Magic numbers / hardcoded params    %%%%%%%%%%%%%%%%%%
@@ -63,17 +65,6 @@ imgFiles = {'ollo.jpg';...
              'magok.jpg';...
              'mozsar.jpg';...
              'konzervdoboz.jpg'};
-
-
-% imgDir = 'C:\Users\Luca\Documents\mta-ttk anyagok\alku_jatek\';
-% imgFiles = {'kerti_szerszamok.png';...
-%              'minitraktor.jpg';...
-%              'talicska.jpeg';...
-%              'viragfold.jpg';...
-%              'kanna.png';...
-%              'magok.jpg';...
-%              'locsolocso.jpg';...
-%              'kerteszsityak.jpg'};
 
 imgNo = length(imgFiles);
 imgLoc = [0.2, 0.10;...  % defines img center coordinates (x, y) in scale 0-1, where (0, 0) is the top left corner
@@ -136,6 +127,9 @@ shelvesNoRectSize = [60, 60];
 counterNoLoc = counterLoc;
 counterNoLoc(:, 2) = counterNoLoc(:, 2)+0.10;
 counterNoRectSize = [60, 60];
+
+% Network address of remote PC for handshake and udp communication
+remoteIP = '10.160.21.115';
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -416,11 +410,18 @@ try
 
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%    Communication part - sending UDP packages    %%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        if changeFlag
+            
+
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%%%%    Draw token numbers and counter images if needed %%%%%%%%%%%%%%
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-        % init / adjust counter
+        % if the screen needs to be updated
         if changeFlag
 
             % draw updated token amounts on shelves
