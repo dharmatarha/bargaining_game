@@ -48,7 +48,7 @@ end
 
 % save files
 for k = 1:imgNo  
-   newFilename = [imgFiles(k).name(1:end-3), '_RE_', num2str(k), '.png']; % imwrite does not support jpg!
+   newFilename = [imgFiles(k).name(1:end-4), '_RE_', num2str(k), '.png']; % imwrite does not support jpg!
    imwrite(resizedImgs{k}, newFilename); 
 end
 
