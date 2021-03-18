@@ -188,6 +188,17 @@ counterNoLocOther = counterLocOther;
 counterNoLocOther(:, 2) = counterNoLocOther(:, 2)+0.10;
 
 
+%% Screen locations for buttons and summed value displays
+bargainLoc = [0.5, 0.75];
+bargainRectSize = [120, 120];
+totalWealthLoc = [0.9, 0.1];
+totalWealthRectSize = [120, 120];
+playerOfferLoc = [];
+playerOfferRectSize = [];
+otherOfferLoc = [];
+otherOfferRectSize = [];
+
+
 %% Psychtoolbox params
 backgrColor = [255 255 255 0];  % white transparent background
 instrTime = 60;  % max time for displaying instructions
@@ -299,6 +310,10 @@ try
         counterNoRectOther(:, i) = CenterRectOnPoint(baseRect, counterNoLocOther(i, 1)*xPix, counterNoLocOther(i, 2)*yPix);
     end
 
+    % get rectangle for the bargain button
+    baseRect = [0, 0, bargainRectSize(1), bargainRectSize(2)];
+    bargainRect = CenterRectOnPoint(baseRect, bargainLoc(i, 1)*xPix, bargainLoc(i, 2)*yPix);
+
 
     %% Prepare a basic "shelves" texture with token images and prices, using an
     % offscreen window
@@ -319,6 +334,15 @@ try
     counterFrameRect = [0.05, 0.60, 0.95, 0.95];
     counterFrameWidth = 3;
     Screen("FrameRect", shelvesWin, counterFrameColor, counterFrameRect, counterFrameWidth);
+
+    % add the bargain button
+    bargainFrameColor = [0 0 0];
+    bargainFillColor = [255, 128, 128, 0];
+    bargainFrameWidth = 3;
+    Screen("FillOval", shelvesWin, bargainFillColor, bargainRect);
+    Screen("FrameOval", shelvesWin, bargainFrameColor, bargainRect, bargainFrameWidth);
+    DrawFormattedText(shelvesWin, "CSERE!", "center", "center", txtColor, [], [],...
+            [], [], [], bargainRect);
 
 
     %% Prepare each token image as a separate texture 
@@ -376,7 +400,7 @@ try
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % preallocate flags, vars
-    counterState = tokenAmounts;
+    counterState = zeros(imgNo, 1);
     counterStarted = zeros(imgNo, 1);  
     shelvesState = tokenAmounts;
     changeFlag = false;  % flag for changing the content of the display
@@ -386,6 +410,9 @@ try
     other_c2s = counter2shelves;
     other_cState = counterState;
     previousIncoming = zeros(counterTypesMax+imgNo, 1);
+    bargainFlag = false;  % flag for a player clicking on the bargain button
+    bargainUpdate = false;  % flag for completing a bargain
+
 
     % wait for key press or maximum allowed time
     while GetSecs < firstFlip + timeout
@@ -400,117 +427,223 @@ try
         [incomingMessage, udpBytesCount] = recv(udpSocket, 512, MSG_DONTWAIT);  % non-blocking, udpBytesCount is -1 if there was no data
         if udpBytesCount ~= -1
             tmpCellArray = strsplit(char(incomingMessage), " ");  % from bytes to char, from char to cell array of char
-            incomingVector = cellfun(@str2double, tmpCellArray);  % numeric vector
-            % only go on if the message is different than the last one
-            if ~isequal(incomingVector, previousIncoming)
-                other_c2s = incomingVector(1:counterTypesMax)';  % counter2shelves vector for OTHER player
-                other_cState = incomingVector(counterTypesMax+1:end)';  % counterState vector for OTHER player
-                previousIncoming = incomingVector;
-                offerAmount = other_cState(other_c2s).*tokenPrices(other_c2s);
-                otherChange = true;
-        end
+            % decide first if we received a "BargainState" message or a counter state description
+            if numel(tmpCellArray) == 1 && strcmp(tmpCellArray{1}, "BargainState")
+                % if we are already in bargain state, send out the message again and set flag for updating all states
+                if bargainFlag
+                    udpMessage = 'BargainState';
+                    send(udpSocket, udpMessage);
+                    bargainUpdate = true;
+                end
+            % else try to treat it as counter state vectors
+            else
+                incomingVector = cellfun(@str2double, tmpCellArray);  % numeric vector
+                % only go on if the message is different than the last one
+                if ~isequal(incomingVector, previousIncoming)
+                    other_c2s = incomingVector(1:counterTypesMax)';  % counter2shelves vector for OTHER player
+                    other_cState = incomingVector(counterTypesMax+1:end)';  % counterState vector for OTHER player
+                    previousIncoming = incomingVector;
+                    offerAmount = other_cState(other_c2s).*tokenPrices(other_c2s);
+                    otherChange = true;
+                end
+            end  % if numel(tmpCellArray)
+        end  % if udpBytesCount ~= -1
 
-        % track mouse, give location relative to onscreen window
-        [xM, yM, buttons] = GetMouse(onWin);
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%    No bargain update path    %%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Check mouse, decide if player placed / took away stg on / from counter,
+        % handle basic udp comms
+
+        if ~bargainUpdate
+
+            % track mouse, give location relative to onscreen window
+            [xM, yM, buttons] = GetMouse(onWin);
 
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%    Click detection part - decide what to do     %%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%    Click detection part - decide what to do     %%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % if there is a button click, check if mouse cursor is in one of the 
-        % image rects
-        if any(buttons)
-            mouseInRect = xM > shelvesRect(1, :) & xM < shelvesRect(3, :) & yM > shelvesRect(2, :) & yM < shelvesRect(4, :);  % returns logical row vector
+            % if there is a button click, check if mouse cursor is in one of the 
+            % image rects
+            if any(buttons)
+                mouseInRect = xM > shelvesRect(1, :) & xM < shelvesRect(3, :) & yM > shelvesRect(2, :) & yM < shelvesRect(4, :);  % returns logical row vector
+                mouseInBargain = xM > bargainRect(1) && xM < bargainRect(3) && yM > bargainRect(2) && yM < bargainRect(4)
 
-            % if cursor is in one of the image rects, check if that token is on the counter
-            if any(mouseInRect)
+                % if cursor is in one of the image rects, check if that token is on the counter
+                % only do checks if we are not in bargain state ("bargainFlag")
+                if any(mouseInRect)  && ~bargainFlag
 
-                % if token is already on the counter, check the type of button click and if the action is allowed
-                if shelves2counter(mouseInRect)
+                    % if token is already on the counter, check the type of button click and if the action is allowed
+                    if shelves2counter(mouseInRect)
 
-                    % if player added a token from shelves to counter and there was at least one token on shelves,
-                    % adjust the state vectors and set changeFlag for redrawing
-                    if isequal(buttons, addButtonState) && shelvesState(mouseInRect) > 0
-                        counterState(mouseInRect) = counterState(mouseInRect) + 1;
-                        shelvesState(mouseInRect) =  shelvesState(mouseInRect)-1;
-                        changeFlag = true;
+                        % if player added a token from shelves to counter and there was at least one token on shelves,
+                        % adjust the state vectors and set changeFlag for redrawing
+                        if isequal(buttons, addButtonState) && shelvesState(mouseInRect) > 0
+                            counterState(mouseInRect) = counterState(mouseInRect) + 1;
+                            shelvesState(mouseInRect) =  shelvesState(mouseInRect)-1;
+                            changeFlag = true;
 
-                    % if player took a token back from the counter and there was at least one token on counter,
-                    % adjust the state vectors and set changeFlag for redrawing,
-                    % further check if token is off the counter completely
-                    elseif isequal(buttons, subtractButtonState) && counterState(mouseInRect) > 0
-                        counterState(mouseInRect) = counterState(mouseInRect) - 1;
-                        shelvesState(mouseInRect) =  shelvesState(mouseInRect)+1;
-                        changeFlag = true;
-                        % if token is off the counter, set the mappings back to zero
-                        if counterState(mouseInRect) == 0
-                            counter2shelves(shelves2counter(mouseInRect)) = 0;
-                            shelves2counter(mouseInRect) = 0;
-                        end
-                    end
-
-                % if token is not on the counter yet, check the type of button click
-                elseif shelves2counter(mouseInRect) == 0
-
-                    % if player added a token from shelves to counter and there was at least one token on shelves,
-                    % check if there is space on the counter
-                    if isequal(buttons, addButtonState) && shelvesState(mouseInRect) > 0
-                        % if there is any space, place the token there, adjust state vectors,
-                        % and set changeFlag for rewdrawing,
-                        % otherwise ignore the click
-                        if any(counter2shelves==0)
-                            % find the smallest index for an empty space on counter
-                            counterSpaceIdx = find(counter2shelves==0, 1);
-                            % adjust counter2shelves mapping
-                            counter2shelves(counterSpaceIdx) = find(mouseInRect);
-                            % adjust shelves2counter mapping
-                            shelves2counter(mouseInRect) = counterSpaceIdx;
-                            % adjust state vectors, set changeFlag
+                        % if player took a token back from the counter and there was at least one token on counter,
+                        % adjust the state vectors and set changeFlag for redrawing,
+                        % further check if token is off the counter completely
+                        elseif isequal(buttons, subtractButtonState) && counterState(mouseInRect) > 0
                             counterState(mouseInRect) = counterState(mouseInRect) - 1;
                             shelvesState(mouseInRect) =  shelvesState(mouseInRect)+1;
                             changeFlag = true;
-                        end  % if any(counter2shelves==0)
+                            % if token is off the counter, set the mappings back to zero
+                            if counterState(mouseInRect) == 0
+                                counter2shelves(shelves2counter(mouseInRect)) = 0;
+                                shelves2counter(mouseInRect) = 0;
+                            end
+                        end
 
-                    end  % if isequal(buttons...
+                    % if token is not on the counter yet, check the type of button click
+                    elseif shelves2counter(mouseInRect) == 0
 
-                end  % if shelves2coutner(mouseInRect)
+                        % if player added a token from shelves to counter and there was at least one token on shelves,
+                        % check if there is space on the counter
+                        if isequal(buttons, addButtonState) && shelvesState(mouseInRect) > 0
+                            % if there is any space, place the token there, adjust state vectors,
+                            % and set changeFlag for rewdrawing,
+                            % otherwise ignore the click
+                            if any(counter2shelves==0)
+                                % find the smallest index for an empty space on counter
+                                counterSpaceIdx = find(counter2shelves==0, 1);
+                                % adjust counter2shelves mapping
+                                counter2shelves(counterSpaceIdx) = find(mouseInRect);
+                                % adjust shelves2counter mapping
+                                shelves2counter(mouseInRect) = counterSpaceIdx;
+                                % adjust state vectors, set changeFlag
+                                counterState(mouseInRect) = counterState(mouseInRect) - 1;
+                                shelvesState(mouseInRect) =  shelvesState(mouseInRect)+1;
+                                changeFlag = true;
+                            end  % if any(counter2shelves==0)
 
-            end  % if any(mouseInRect)
+                        end  % if isequal(buttons...
 
-            % wait till button is released (click ended)
-            while any(buttons)
-                WaitSecs(0.01);  % 10 msecs
-                [xM, yM, buttons] = GetMouse(onWin);
-            end  % while
+                    end  % if shelves2coutner(mouseInRect)
 
-        end  % if any(buttons)
+                end  % if any(mouseInRect)
+
+                % if the cursor was on the bargain button, check the type of click and the state of the bargain flag
+                if mouseInBargain
+                    % if there was no bargain state, but player clicked on the button, start bargain state
+                    if ~bargainFlag && isequal(buttons, addButtonState)
+                        bargainFlag = true;
+                    % if there was bargain state and player clicked on button, exist bargain state
+                    elseif bargainFlag && isequal(buttons, addButtonState)
+                        bargainFlag = false;
+                    end
+                end  % if mouseInBargain
+
+                % wait till button is released (click ended)
+                while any(buttons)
+                    WaitSecs(0.01);  % 10 msecs
+                    [xM, yM, buttons] = GetMouse(onWin);
+                end  % while
+
+            end  % if any(buttons)
 
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%    Communication part - sending UDP packages    %%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%%%    Communication part - sending UDP packages    %%%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-        % if there was any change, send the following information as a package:
-        % (1) counter2shelves - the mapping from counter positions to shelves tokens
-        % (2) counterState - the token amounts played on the counter, for all token types on the shelves
-        if changeFlag
-            udpMessage = num2str([counter2shelves; counterState]');  % string representation of concatenated vectors
-            % send packet, do it twice for safety
-            for i = 1:2
+            % if there was any change, send the following information as a package:
+            % (1) counter2shelves - the mapping from counter positions to shelves tokens
+            % (2) counterState - the token amounts played on the counter, for all token types on the shelves
+            if changeFlag
+                udpMessage = num2str([counter2shelves; counterState]');  % string representation of concatenated vectors
+                % send packet, do it twice for safety
+                for i = 1:2
+                    send(udpSocket, udpMessage);
+                end  % for
+            end  % if
+
+            % if we are in bargain state, send that information to the other side
+            if bargainFlag
+                udpMessage = 'BargainState';
+                % only send it once, will repeatedly do so in the whil loop
                 send(udpSocket, udpMessage);
-            end  % for
-        end  % if
+            end  % if
+
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %%%%%    Draw token numbers and counter images if needed %%%%%%%%%%%%%%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            % if the screen needs to be updated
+            if changeFlag  || otherChange
+
+                % draw updated token amounts on shelves
+                for i = 1:imgNo
+                    DrawFormattedText(onWin, [num2str(shelvesState(i)), "x"],... 
+                            "center", "center", txtColor, [], [], [], [], [],... 
+                            shelvesNoRect(:, i)');
+                end  % for
+
+                % draw updated counter numbers + corresponding image
+                for i = 1:counterTypesMax
+                    if counter2shelves(i) > 0
+                        DrawFormattedText(onWin, [num2str(counterState(counter2shelves(i))), "x"],... 
+                                "center", "center", txtColor, [], [], [], [], [],... 
+                                counterNoRect(:, i)');
+                        Screen("DrawTexture", onWin, countokenAmountsterImgTex(counter2shelves(i), i));
+                    end  % if
+                end  % for
+
+                % draw updated counter numbers + corresponding image for OTHER player
+                for i = 1:counterTypesMax
+                    if other_c2s(i) > 0
+                        DrawFormattedText(onWin, [num2str(other_cState(other_c2s(i))), "x"],... 
+                                "center", "center", txtColor, [], [], [], [], [],... 
+                                counterNoRectOther(:, i)');
+                        Screen("DrawTexture", onWin, counterImgTexOther(other_c2s(i), i));
+                    end  % if
+                end  % for
+
+                % draw images & prices for shelves
+                Screen("DrawTextures", onWin, shelvesWin);
+
+                % flip
+                Screen("Flip", onWin);
+                
+                % set change flags back to default
+                changeFlag = false;
+                otherChange = false;
+
+            end  % if changeFlag
+
+        end  % if ~bargainUpdate
 
 
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%    Draw token numbers and counter images if needed %%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%    Bargain update path    %%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % Update all state vectors and flags, reset update and change flags,
+        % Display new token numbers
 
-        % if the screen needs to be updated
-        if changeFlag  || otherChange
-
+        if bargainUpdate
+            % add tokens in other player's offer to own ones
+            shelvesState(other_c2s) = shelvesState(other_c2s) + other_cState(other_c2s);
+            % reset both players' counter states
+            counterState = zeros(imgNo, 1);;
+            counterStarted = zeros(imgNo, 1);  
+            changeFlag = false;  % flag for changing the content of the display
+            shelves2counter = zeros(imgNo, 1);  % mapping between tokens on shelves and counter positions
+            counter2shelves = zeros(counterTypesMax, 1);  % mapping from counter positions to shelves
+            otherChange = false;  % flag for checking if there was a change on the counter by the other player
+            other_c2s = counter2shelves;
+            other_cState = counterState;
+            previousIncoming = zeros(counterTypesMax+imgNo, 1);
+            bargainFlag = false;  % flag for a player clicking on the bargain button
+            bargainUpdate = false;  % flag for completing a bargain
+        
+            % update shelves and counter
             % draw updated token amounts on shelves
             for i = 1:imgNo
                 DrawFormattedText(onWin, [num2str(shelvesState(i)), "x"],... 
@@ -524,7 +657,7 @@ try
                     DrawFormattedText(onWin, [num2str(counterState(counter2shelves(i))), "x"],... 
                             "center", "center", txtColor, [], [], [], [], [],... 
                             counterNoRect(:, i)');
-                    Screen("DrawTexture", onWin, counterImgTex(counter2shelves(i), i));
+                    Screen("DrawTexture", onWin, countokenAmountsterImgTex(counter2shelves(i), i));
                 end  % if
             end  % for
 
@@ -543,14 +676,14 @@ try
 
             % flip
             Screen("Flip", onWin);
-            
-            % set change flags back to default
-            changeFlag = false;
-            otherChange = false;
 
-        end  % if changeFlag
+            % wait a bit
+            WaitSecs(2);
+
+        end  % if ~bargainUpdate
 
     end  % while
+
 
     % goodbye
     disp("Thanks for shopping with us!");
