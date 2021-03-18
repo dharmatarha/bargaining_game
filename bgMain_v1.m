@@ -32,16 +32,16 @@ pkg load sockets
 
 %% these should be input args (?):
 % which column of tokens, prices should we use, one of 1-2
-player = 1;
+player = 2;
 % pair number
 pairNo = 99;
 % config type and number
 confType = 1;  % scale from 1 to 5
 confNo = 1;  % idx of specific config from pre-generated set
 % Network address of remote PC for handshake and udp communication
-remoteIP = '10.160.21.115';
+remoteIP = '10.160.12.110';
 % base folders
-baseDir = "/home/adamb/bargaining_game/";  % repo
+baseDir = "/home/user502/BG/bargaining_game/";  % repo
 imgDir = "sorted_BOSS_NOUN_rs_150x150/";  % folder in repo containing token images
 
 
@@ -201,7 +201,7 @@ otherOfferRectSize = [];
 
 %% Psychtoolbox params
 backgrColor = [255 255 255 0];  % white transparent background
-instrTime = 60;  % max time for displaying instructions
+instrTime = 10;  % max time for displaying instructions
 timeout = 120;  % max wait time to quit
 exitKey = 'Escape';
 addButtonState = [1 0 0];  % mouse button vector for left click
@@ -312,7 +312,7 @@ try
 
     % get rectangle for the bargain button
     baseRect = [0, 0, bargainRectSize(1), bargainRectSize(2)];
-    bargainRect = CenterRectOnPoint(baseRect, bargainLoc(i, 1)*xPix, bargainLoc(i, 2)*yPix);
+    bargainRect = CenterRectOnPoint(baseRect, bargainLoc(1)*xPix, bargainLoc(2)*yPix);
 
 
     %% Prepare a basic "shelves" texture with token images and prices, using an
@@ -362,7 +362,7 @@ try
     for i = 1:imgNo  % loop through images / tokens
         tmpTex = Screen("MakeTexture", onWin, imgs{i});
         for z = 1:counterTypesMax  % loop through potential counter locations
-            counterImgTex(i, z) = Screen("OpenOffScreenWindow", onWin, backgrColor);
+            counterImgTexOther(i, z) = Screen("OpenOffScreenWindow", onWin, backgrColor);
             Screen("DrawTexture", counterImgTexOther(i, z), tmpTex, [], counterRectOther(:, z)');
         end
     end
@@ -396,7 +396,7 @@ try
 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%    Mouse tracking loop    %%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%    Main loop   %%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % preallocate flags, vars
@@ -443,7 +443,11 @@ try
                     other_c2s = incomingVector(1:counterTypesMax)';  % counter2shelves vector for OTHER player
                     other_cState = incomingVector(counterTypesMax+1:end)';  % counterState vector for OTHER player
                     previousIncoming = incomingVector;
-                    offerAmount = other_cState(other_c2s).*tokenPrices(other_c2s);
+                    if any(other_c2s ~= 0)
+                        tmpIdx = other_c2s;
+                        tmpIdx(tmpidx==0)=[];
+                        offerAmount = other_cState(tmpIdx).*tokenPrices(tmpIdx);
+                    end         
                     otherChange = true;
                 end
             end  % if numel(tmpCellArray)
@@ -517,8 +521,8 @@ try
                                 % adjust shelves2counter mapping
                                 shelves2counter(mouseInRect) = counterSpaceIdx;
                                 % adjust state vectors, set changeFlag
-                                counterState(mouseInRect) = counterState(mouseInRect) - 1;
-                                shelvesState(mouseInRect) =  shelvesState(mouseInRect)+1;
+                                counterState(mouseInRect) = counterState(mouseInRect) + 1;
+                                shelvesState(mouseInRect) =  shelvesState(mouseInRect) - 1;
                                 changeFlag = true;
                             end  % if any(counter2shelves==0)
 
@@ -591,7 +595,7 @@ try
                         DrawFormattedText(onWin, [num2str(counterState(counter2shelves(i))), "x"],... 
                                 "center", "center", txtColor, [], [], [], [], [],... 
                                 counterNoRect(:, i)');
-                        Screen("DrawTexture", onWin, countokenAmountsterImgTex(counter2shelves(i), i));
+                        Screen("DrawTexture", onWin, counterImgTex(counter2shelves(i), i));
                     end  % if
                 end  % for
 
@@ -629,7 +633,11 @@ try
 
         if bargainUpdate
             % add tokens in other player's offer to own ones
-            shelvesState(other_c2s) = shelvesState(other_c2s) + other_cState(other_c2s);
+            if any(other_c2s ~= 0)
+                tmpIdx = other_c2s;
+                tmpIdx(tmpidx==0)=[];
+                shelvesState(tmpIdx) = shelvesState(tmpIdx) + other_cState(tmpIdx);
+            end  
             % reset both players' counter states
             counterState = zeros(imgNo, 1);;
             counterStarted = zeros(imgNo, 1);  
