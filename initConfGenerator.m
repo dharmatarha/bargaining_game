@@ -6,7 +6,7 @@
 % - PWFideal(idx, 1) is close to PWFideal(idx, 2) and they are both > 100,
 % that is, there is a potential for bargaining even after exchanging
 % must-haves
-% - msutHavesPrice(idx, 1) is close to mustHavesPrice(idx, 2), that is, the
+% - mustHavesPrice(idx, 1) is close to mustHavesPrice(idx, 2), that is, the
 % must-have tokens represent a similar overall value for both players
 %
 %
