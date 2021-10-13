@@ -3,7 +3,7 @@ function subjectiveVideoPlayback_V0(pairNo, labName)
 %% the Bargaining Game) with subjective evaluation of predictability 
 %% aka a slider that moves horizontally with the mouse
 %
-% - movement of mouse on the slider is recorded at every video frame
+% - movement of the slider is recorded at every video frame
 % - slider position is defined relative to the screen size 
 % - a line indicating the center of the scale is optional
 % - exits after video is done playing or max timeout is reached (vidLength) or 
@@ -188,8 +188,6 @@ try
     startAt = GetSecs;
     
 %%%%%%%%%%%%%%%% Main while loop %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
- 
-    %for i = 1:framecount
       
     while ~KbCheck && GetSecs < startAt+vidLength 
       
@@ -245,7 +243,7 @@ try
           position = (position/(max(scaleRange)-min(scaleRange)))*100; % Converts the value to percentage 
          
           % store mouse position data 
-          sliderPos(count+1, :) = round(position);                   
+          sliderPos(count+1,:) = position;                   
         end
                  
         % Display position
@@ -264,14 +262,15 @@ try
       end % if
                     
     endwhile
-   % end % for
 
+    disp('Movie ended, bye!');
+   
 %%% Cleaning up 
 
-    save(sliderValueFile, "sliderPos");
- 
+    save(sliderValueFile, "sliderPos");        
     Screen('CloseMovie');
     Screen('Close');
+    RestrictKeysForKbCheck([]);
     sca;
       
 catch ME
