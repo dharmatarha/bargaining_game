@@ -78,13 +78,13 @@ end
 
 % Network address of remote PC for handshake and udp communication
 if strcmp(labName, 'Mordor')
-    remoteIP = '192.168.0.1';
+    remoteIP = '192.168.1.20';
 elseif strcmp(labName, 'Gondor')
-    remoteIP = '192.168.0.60';
+    remoteIP = '192.168.1.10';
 end
 
 % base folders
-baseDir = "/home/mordor/bargaining_game/";  % repo
+baseDir = "/home/mordor/CommGame/bargaining_game/";  % repo
 imgDir = "sorted_BOSS_NOUN_rs_100x100/";  % folder in repo containing token images
 
 
@@ -281,7 +281,7 @@ counterNoLocOther(:, 2) = counterNoLocOther(:, 2)+0.10;
 
 %% Screen locations for buttons and summed value displays
 
-bargainLoc = [0.5, 0.84];
+bargainLoc = [0.5, 0.82];
 bargainRectSize = [120, 120];
 totalWealthLoc = [0.5, 0.73];
 totalWealthRectSize = [100, 60];
@@ -289,8 +289,8 @@ playerOfferLoc = [0.40, 0.85];
 playerOfferRectSize = [60, 60];
 otherOfferLoc = [0.60, 0.85];
 otherOfferRectSize = [60, 60];
-mustHavesEndingLoc = [0.5, 0.93];
-mustHavesEndingRectSize = [80, 60];
+mustHavesEndingLoc = [0.5, 0.92];
+mustHavesEndingRectSize = [100, 80];
 
 % screen locations for line between shelves and counter
 lineLoc = [0, 0.68, 1, 0.68];
@@ -446,24 +446,26 @@ try
     
     % get rectangle for must-haves ending button
     baseRect = [0, 0, mustHavesEndingRectSize(1), mustHavesEndingRectSize(2)];
-    mustHavesEndingRect = CenterRectOnPoint(baseRect, MustHavesEndingLoc(1)*xPix, MustHavesEndingLoc(2)*yPix);    
+    mustHavesEndingRect = CenterRectOnPoint(baseRect, mustHavesEndingLoc(1)*xPix, mustHavesEndingLoc(2)*yPix);    
     
     % Prepare rectangles for must haves:
     % These rects are based on (1) the rects of tokens on "shelves" 
     % and (2) the rects of prices 
-    mustHavesExtraWidth = 0.02;  % extra width / size of rectangle for must haves added to size of image and price rects, in screen ratio
+    mustHavesExtraWidth = 0;  % extra width / size of rectangle for must haves added to size of image and price rects, in screen ratio
     mustHavesRect = nan(4, imgNo);
     for i = 1:imgNo
         if ~isnan(mustHaves(i))
             mustHavesRect(1:2, i) = [shelvesRect(1, i)-mustHavesExtraWidth*xPix, shelvesRect(2, i)-mustHavesExtraWidth*yPix];
-            mustHavesRect(3:4, i) = [priceRect(3, i)+mustHavesExtraWidth*xPix, shelvesRect(4, i)+mustHavesExtraWidth*yPix];
+            mustHavesRect(3:4, i) = [shelvesRect(3, i)+mustHavesExtraWidth*xPix, shelvesRect(4, i)+mustHavesExtraWidth*yPix];
         end
     end
     
     % prepare rectangles for must have numbers
-    mustHaveAmountRect = priceRect;
-    mustHaveAmountRect(1, :) = mustHaveAmountRect(1, :) + 0.05;
-    mustHaveAmountRect(3, :) = mustHaveAmountRect(3, :) + 0.05;
+    mustHaveAmountRect = shelvesRect;
+    mustHaveAmountRect(1, :) = mustHaveAmountRect(3, :);
+    mustHaveAmountRect(3, :) = mustHaveAmountRect(3, :) + 60;
+%    mustHaveAmountRect(1, :) = mustHaveAmountRect(1, :) + 0.05*xPix;
+%    mustHaveAmountRect(3, :) = mustHaveAmountRect(3, :) + 0.05*xPix;
     mustHaveAmountRect(:, isnan(mustHaves)) = nan;
     
     
@@ -492,7 +494,7 @@ try
     
     % add frames for must haves as well
     mustHaveColor = [255 0 0];
-    mustHaveRectWidth = 2;
+    mustHaveRectWidth = 4;
     Screen("FrameRect", shelvesWin, mustHaveColor, mustHavesRect, mustHaveRectWidth);
     
     % draw must have prices
@@ -658,11 +660,11 @@ try
         [incomingMessage, udpBytesCount] = recv(udpSocket, 512, MSG_DONTWAIT);  % non-blocking, udpBytesCount is -1 if there was no data
         if udpBytesCount ~= -1
             tmpCellArray = strsplit(char(incomingMessage), " ");  % from bytes to char, from char to cell array of char
-            % decide first if we received a "BargainState" message 
-            if numel(tmpCellArray) == 1 && strcmp(tmpCellArray{1}, "BargainState")
+            % decide first if we received a "bargainState" message 
+            if numel(tmpCellArray) == 1 && strcmp(tmpCellArray{1}, "bargainState")
                 % if we are already in bargain state, send out the message again and set flag for updating all states
                 if bargainFlag
-                    udpMessage = 'BargainState';
+                    udpMessage = 'bargainState';
                     send(udpSocket, udpMessage);
                     bargainUpdate = true;
                 end
@@ -817,7 +819,7 @@ try
 
             % if we are in bargain state, send that information to the other side
             if bargainFlag
-                udpMessage = 'BargainState';
+                udpMessage = "bargainState";
                 % only send it once, will repeatedly do so in the whil loop
                 send(udpSocket, udpMessage);
             end  % if
@@ -952,7 +954,7 @@ try
             
             %  Check if must haves have been collected    
             if ~mustHavesFlag
-                if shelvesState(mustHavesBool) == mustHaves(mustHavesBool)
+                if all(shelvesState(mustHavesBool) >= mustHaves(mustHavesBool))
                     mustHavesFlag = true;
                 end
             end
