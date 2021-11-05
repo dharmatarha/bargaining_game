@@ -777,7 +777,7 @@ try
                 end  % for
 
                 % draw the value of the counter fpr OTHER player
-                otherOfferValue = counterState.*tokenPrices;
+                otherOfferValue = other_cState.*tokenPrices;
                 if otherOfferValue > 0
                     DrawFormattedText(onWin, [num2str(otherOfferValue), " ft"],...
                         "center", "center", txtColor, [], [], [], [], [], ...

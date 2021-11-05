@@ -87,13 +87,13 @@ end
 
 % Network address of remote PC for handshake and udp communication
 if strcmp(labName, 'Mordor')
-    remoteIP = '192.168.1.60';
+    remoteIP = '10.160.12.111';
 elseif strcmp(labName, 'Gondor')
-    remoteIP = '192.168.1.1';
+    remoteIP = '10.160.12.108';
 end
 
 % base folders
-baseDir = "/home/mordor/CommGame/bargaining_game/";  % repo
+baseDir = "/home/adamb/bargaining_game/";  % repo
 imgDir = "sorted_BOSS_NOUN_rs_100x100/";  % folder in repo containing token images
 
 
@@ -220,11 +220,11 @@ for i = 1:imgNo
 end
 
 
-%% Trigger preparations
-% init parallel port control
-ppdev_mex('Open', 1);
-trigL = 2000;  % microseconds
-trigSignal = 100;
+%%% Trigger preparations
+%% init parallel port control
+%ppdev_mex('Open', 1);
+%trigL = 2000;  % microseconds
+%trigSignal = 100;
 
 
 %% Screen locations for images and prices / amounts
@@ -539,7 +539,7 @@ try
     
     % Start capture 
     [reportedSamplingRate, vidCaptureStartTime] = Screen('StartVideoCapture', grabber, vidSamplingRate, vidDropFrames, sharedStartTime);
-    lptwrite(1, trigSignal, trigL);
+%    lptwrite(1, trigSignal, trigL);
     % Check the reported sampling rate, compare to requested rate
     if reportedSamplingRate ~= vidSamplingRate
         warning(['Reported sampling rate from Screen(''StartVideoCapture'') is ', ...
@@ -559,7 +559,7 @@ try
 
     % flip window, get timestamp
     firstFlip = Screen("Flip", onWin);    
-    lptwrite(1, trigSignal, trigL);
+%    lptwrite(1, trigSignal, trigL);
     
     % helper variables for the display loop
     oldtex = 0;
@@ -948,7 +948,7 @@ try
     Screen('CloseVideoCapture', grabber);  % Close engine and recorded movie file
     closeCaptureTime = GetSecs; 
     Priority(0);
-    ppdev_mex('Close', 1);
+%    ppdev_mex('Close', 1);
     sca;
 
     % save major timestamps
@@ -964,8 +964,8 @@ try
     
 % call Screen('CloseAll') and rethrow error if stg went south
 catch ME
-    lptwrite(1, trigSignal, trigL);
-    ppdev_mex('Close', 1);
+%    lptwrite(1, trigSignal, trigL);
+%    ppdev_mex('Close', 1);
     sca;  % closes video too
     disconnect(udpSocket);
     Priority(0);
