@@ -251,10 +251,10 @@ PWFeasy = abs(confDiffSums) <= 10 & ...
     PWFdiff < 50;
 
 % get hard ones based on PWF
-PWFhard = abs(confDiffSums) <= 10 & ...
+PWFhard = abs(confDiffSums) <= 20 & ...
     PWF(:, 1) > 50 & PWF(:, 1) < 150 & ... 
     PWF(:, 2) > 50 & PWF(:, 2) < 150 & ...
-    PWFdiff < 50;
+    PWFdiff < 100;
 
 
 %% Easy ones based on PWFeasy, PWFideal and mustHavesPrice
@@ -275,9 +275,26 @@ end
     
     
     
+% Harder ones based on PWFeasy, PWFideal and mustHavesPrice
+harderIdx = PWFhard & abs(PWFideal(:, 1)-PWFideal(:, 2)) < 150 & ...
+    abs(PWFideal(:, 1)-PWFideal(:, 2)) > 50 & ...
+    abs(mustHavesPrice(:, 1)-mustHavesPrice(:, 2)) < 100 & ...
+    abs(mustHavesPrice(:, 1)-mustHavesPrice(:, 2)) > 50 & ...
+    PWFideal(:, 1) > 20 & PWFideal(:, 2) > 20 & ...
+    PWFideal(:, 1) < 150 & PWFideal(:, 2) < 150;
+
+harderIdx = find(harderIdx);
     
-    
-    
+harderConfigs = struct;
+for i=1:numel(harderIdx) 
+    z=harderIdx(i); 
+    harderConfigs(i).tokens = squeeze(confTokens(z, :, :)); 
+    harderConfigs(i).prices = squeeze(confPrices(z, :, :));
+    harderConfigs(i).mustHaves = squeeze(confMustHaves(z, :, :)); 
+    harderConfigs(i).PWF = PWF(z, :); 
+    harderConfigs(i).PWFideal = PWFideal(z, :); 
+    harderConfigs(i).mustHavesPrice = mustHavesPrice(z, :); 
+end    
     
     
     
