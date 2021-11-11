@@ -3,16 +3,23 @@ function subjectiveVideoPlayback_V4(pairNo, labName)
 %% the Bargaining Game) with subjective evaluation of predictability 
 %% aka a slider that moves horizontally with the mouse
 %
-% - movement of mouse on the slider is recorded at every video frame (output is between 0-100)
 % - slider position is defined relative to the screen size 
 % - exits after video is done playing or max timeout is reached (vidLength) or 
 %   if you press ESC
 % 
 % Usage:
 %         pairNo (1:999), labName ("Mordor", "Gondor") is required
-%         rn the script looks for video and audio in the same folder ('/home/mordor/CommGame/...')
-%         with filenames such as: pair99_Gondor.wav or pair99_Gondor.mov
+%         - rn the script looks for video and audio in the same folder ('/home/mordor/CommGame/pair99/...')
+%         - with filenames such as: pair99_Common_freeConv_audio.wav or pair99_Gondor_freeConv.mov
+% Output:
+%         pair99Gondor_sliderPosition.mat 
+%         - vector containing numeric mouse position data (0-100) for every video frame 
+%         - 0: "egyáltalán nem lepődtem meg", 100: "nagyon meglepődtem"
 %
+%         pair99Gondor_subjtimes.mat
+%         - all relevant timestamps including flips, textures drawn, audio start
+%
+
 
 % check input arguments
 if ~isnumeric(pairNo) || ~ismember(pairNo, 1:999)
@@ -37,32 +44,21 @@ instruction1 = ["A következő részben vissza fogjuk játszani az előző besz�
 instruction2 = ["Kérlek próbáld ki a csúszka használatát! " char(10),...
                char(10), "Ha felkészültél, vidd az egeret a 0-hoz, ",...
                "ezután egy bal klikkel indíthatod a feladatot."];              
-instr_time = 5;
+instr_time = 10;
 timeout = 120; % timeout for tutorial part 
 txtColor = [0, 0, 0];  % black letters
 vidRect = [round(windowSize(3)/8) 0 round(windowSize(3)/8*7) 864];
-%vidRect = [round(windowSize(3)/8) 0 round(windowSize(3)/8*7) windowSize-(windowSize(4)/100*20)];
-%vidRect = [96 0 1728 972];
 
+%%%%%%% video folder %%%%%%%%
 
-%%%%%%% video folders %%%%%%%%
-
-if labName == 'Mordor'
-  vidDir = ['/home/lucab/pair', num2str(pairNo), '/pair', num2str(pairNo), 'M/octave/'];
-elseif % Gondor
-  vidDir = ['/home/lucab/pair', num2str(pairNo), '/pair', num2str(pairNo), 'G/octave/'];
-end
-%moviename = ["pair", num2str(pairNo), "_", labName, ".mov"];
-moviename = ["pair", num2str(pairNo), labName, ".mov"];
-%vidDir = '/home/mordor/CommGame/videoStreamTests/psychtoolbox/';
-vidDir = '/media/lucab/HV620S/';
-%moviename = ["pair", num2str(pairNo), labName, ".mov"];
+vidDir = ['/home/mordor/CommGame/pair', num2str(pairNo), "/"];
+moviename = ["pair", num2str(pairNo), "_", labName, "_freeConv.mov"];
 moviefilename = [vidDir, moviename];
 
 %%%%%%% audio params %%%%%%%%
 
-%audiofile = [vidDir, 'pair', num2str(pairNo), '_', labName, '.wav'];
-audiofile = '/media/lucab/HV620S/pair1_Mordor_audio_free.wav';
+audiofile = [vidDir, 'pair', num2str(pairNo), '_Common_freeConv_audio.wav'];
+%audiofile = '/media/lucab/HV620S/pair1_Mordor_audio_free.wav';
 mode = []; % default mode, only playback
 reqLatencyClass = 0;  % not aiming for low latency
 freq = 44100;  % sampling rate in Hz
@@ -111,11 +107,21 @@ try
     startPosition = 'left'; % position of scale
     displayPos    = false; % display numeric position of slider (0-100)
     
+    % chosing the right mouse device 
     [mouseIndices, productnames] = GetMouseIndices;
+    mouseName = 'Logitech';
     device = 'mouse';    
-    mouseid = 0;
+    for k = 1:numel(productnames)
+      if strncmp(productnames(k), mouseName, length(mouseName))
+        mouseid = mouseIndices(k);
+      endif
+    endfor
     
-    HideCursor(win, mouseid);
+    disp([char(10), num2str(mouseIndices)]);
+    disp(productnames);
+    disp([char(10), 'Using mouse with index: ', num2str(mouseid)]);
+    
+    HideCursor(win);
     
     % Parsing size of the global screen
     globalRect = Screen('Rect', screen);
@@ -130,7 +136,7 @@ try
     else
       error('Only right, center and left are possible start positions');
     end
-    SetMouse(round(x), round(rect(4)*scalaPosition), win, mouseid);
+    SetMouse(round(x), round(rect(4)*scalaPosition), win);
     %midTick    = [center(1) rect(4)*scalaPosition - lineLength - 5 center(1) rect(4)*scalaPosition  + lineLength + 5];
     leftTick   = [rect(3)*(1-scalaLength) rect(4)*scalaPosition - lineLength rect(3)*(1-scalaLength) rect(4)*scalaPosition  + lineLength];
     rightTick  = [rect(3)*scalaLength rect(4)*scalaPosition - lineLength rect(3)*scalaLength rect(4)*scalaPosition  + lineLength];
@@ -155,7 +161,7 @@ try
     
     [moviePtr, duration, fps, moviewidth, movieheight, framecount] = Screen('OpenMovie', win, moviefilename);
     disp(["Movie " moviefilename, " opened and ready to play! ",...
-           char(10), "Duration: ", num2str(duration), "secs, with", num2str(framecount), " frames."]);
+           char(10), "Duration: ", num2str(duration), " secs, with ", num2str(framecount), " frames."]);
       
     % preallocate variables for timestamps and mouse position output
     sliderPos = nan(framecount,1);
@@ -242,7 +248,7 @@ try
     endwhile
    
     %Screen('Flip', win); 
-    disp([char(10) "Tutorial finished, moving on.."]);  
+    disp([char(10) "Tutorial finished, moving on.." char(10)]);  
     WaitSecs(2);     
  
 
@@ -259,7 +265,7 @@ try
     droppedFrames = Screen('PlayMovie', moviePtr, 1);
     disp([char(10) 'Starting movie + sound...' char(10)]);
     startAt = GetSecs;
-    audioRealStart = PsychPortAudio('Start', pahandle, 0, startAt+0.045, 0); % start playing audio with 20ms delay which is
+    audioRealStart = PsychPortAudio('Start', pahandle, 0, startAt+0.045, 0); % start playing audio with 45ms delay which is
                                                                             % the estimated value of time between audioRealStart and first flip
     % get current status of audio: includes real start of playback(?)
     audioStatus = PsychPortAudio('GetStatus', pahandle); 
@@ -269,11 +275,11 @@ try
       
     while ~KbCheck && GetSecs < startAt+vidLength                           
       
-      if movieheight > 0 && moviewidth > 0
+      if (movieheight>0) && (moviewidth>0) && (duration>5) % do we have a valid movie loaded?
         
-        [tex, textime] = Screen('GetMovieImage', win, moviePtr, 1);
+        [tex, textime] = Screen('GetMovieImage', win, moviePtr, 1); 
         
-        if tex < 0
+        if tex < 0 % abort if we don't have a valid texture
           break;
         end
         
@@ -339,7 +345,7 @@ try
     %stopaudio = GetSecs;
     s = PsychPortAudio('GetStatus', pahandle); 
     PsychPortAudio('Stop', pahandle);
-    disp([char(10), 'Movie ended, bye!']);
+    disp([char(10), 'Movie ended (or you stopped it), bye!']);
  
 %%% Saving important variables
 
