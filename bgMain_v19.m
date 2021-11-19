@@ -273,26 +273,10 @@ imgLoc = [0.1, 0.08;...  % defines img center coordinates (x, y) in scale 0-1, w
 imgTargetSize = [100, 100];  % size for images - images should be already resized into this size
 
 % locations and rect size for token prices on the shelves
-% priceLoc = [0.23, 0.20;...
-%             0.43, 0.20;...
-%             0.63, 0.20;...
-%             0.83, 0.20;...
-%             0.23, 0.40;...
-%             0.43, 0.40;...
-%             0.63, 0.40;...
-%             0.83, 0.40];
 priceLoc = [imgLoc(:, 1)+0.03, imgLoc(:, 2)+0.07];
 priceRectSize = [60, 60];
 
 % locations and rect size for token numbers on the shelves
-% shelvesNoLoc = [0.17, 0.20;...
-%             0.37, 0.20;...
-%             0.57, 0.20;...
-%             0.77, 0.20;...
-%             0.17, 0.40;...
-%             0.37, 0.40;...
-%             0.57, 0.40;...
-%             0.77, 0.40];
 shelvesNoLoc = [imgLoc(:, 1)-0.03, imgLoc(:, 2)+0.07];
 shelvesNoRectSize = [60, 60];
 
@@ -415,7 +399,6 @@ try
     grabber = Screen('OpenVideoCapture', onWin, -9, vidRes, [], [], [], codec, vidRecFlags);
     % Wait a bit for OpenVideoCapture to return
     WaitSecs('YieldSecs', 1);
-    
     
 
     %% Define rectangles for displaying token images, prices, numbers, etc.
@@ -667,11 +650,14 @@ try
     udpMessageCounter = 1;
     udp_c2sCounter = 1;
     udp_cStateCounter = 1;
-    counterStateStored = zeros(imgNo, length(frameCaptTime));
-    shelvesStateStored = zeros(imgNo, length(frameCaptTime));
-    counter2shelvesStored = zeros(counterTypesMax, length(frameCaptTime));
-    shelves2counterStored = zeros(imgNo, length(frameCaptTime));
-    mousePosStored = zeros(2, length(frameCaptTime));
+    flipData = struct;
+    flipData.counterState = zeros(imgNo, length(frameCaptTime));
+    flipData.shelvesState = zeros(imgNo, length(frameCaptTime));
+    flipData.counter2shelves = zeros(counterTypesMax, length(frameCaptTime));
+    flipData.shelves2counter = zeros(imgNo, length(frameCaptTime));
+    flipData.mousePosStored = zeros(2, length(frameCaptTime));
+    flipData.bargainFlag = zeros(1, length(frameCaptTime));
+    flipData.endingFlag = zeros(1, length(frameCaptTime));
     
     % preallocate flags, vars
     counterState = zeros(imgNo, 1);
@@ -912,7 +898,16 @@ try
 
             % if the screen needs to be updated
             if changeFlag  || otherChange || tex > 0
-
+                
+                % store system state
+                flipData.counterState(:, flipCounter) = counterState;
+                flipData.shelvesState(:, flipCounter) = shelvesState;
+                flipData.counter2shelves(:, flipCounter) = counter2shelves;
+                flipData.shelves2counter(:, flipCounter) = shelves2counter;
+                flipData.mousePos(:, flipCounter) = [xM, yM];
+                flipData.bargainFlag(flipCounter) = bargainFlag;
+                flipData.endingFlagS(flipCounter) = mustHavesEndingFlag;
+                
                 % draw images & prices for shelves
                 Screen("DrawTextures", onWin, shelvesWin);            
             
@@ -1026,12 +1021,21 @@ try
             shelves2counter = zeros(imgNo, 1);  % mapping between tokens on shelves and counter positions
             counter2shelves = zeros(counterTypesMax, 1);  % mapping from counter positions to shelves
             otherChange = false;  % flag for checking if there was a change on the counter by the other player
-            other_c2s = counter2shelves;
-            other_cState = counterState;
+            other_c2s = zeros(counterTypesMax, 1);
+            other_cState = zeros(imgNo, 1);
             previousIncoming = zeros(counterTypesMax+imgNo, 1);
             bargainFlag = false;  % flag for a player clicking on the bargain button
             bargainUpdate = false;  % flag for completing a bargain
             totalWealthValue = dot(shelvesState, tokenPrices);
+            
+            % store system state
+            flipData.counterState(:, flipCounter) = counterState;
+            flipData.shelvesState(:, flipCounter) = shelvesState;
+            flipData.counter2shelves(:, flipCounter) = counter2shelves;
+            flipData.shelves2counter(:, flipCounter) = shelves2counter;
+            flipData.mousePos(:, flipCounter) = [xM, yM];
+            flipData.bargainFlag(flipCounter) = bargainFlag;
+            flipData.endingFlag(flipCounter) = mustHavesEndingFlag;            
             
             %  Check if must haves have been collected    
             if ~mustHavesFlag
@@ -1120,7 +1124,7 @@ try
     % save major timestamps
     save(videoSaveFile, "sharedStartTime", "vidCaptureStartTime",...
     "frameCaptTime", "vidFrameCount", "flipTimeStamps", "stopCaptureTime",...
-    "closeCaptureTime");   
+    "closeCaptureTime", "flipData");   
     
     % goodbye
     disp("Thanks for shopping with us!");
